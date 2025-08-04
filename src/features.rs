@@ -10,6 +10,7 @@ use crate::{
     PITCH_BUF_SIZE, WINDOW_SIZE,
 };
 use easyfft::prelude::*;
+use easyfft::dyn_size::realfft::DynRealDft;
 
 /// Contains the necessary state to compute the features of audio input and synthesize the output.
 ///
