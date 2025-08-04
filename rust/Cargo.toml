@@ -13,6 +13,7 @@ default-run = "nnnoiseless"
 
 [features]
 default = ["bin", "dasp"]
+wasm = ["wasm-bindgen", "wee_alloc"]
 
 bin = ["anyhow", "clap", "dasp_interpolate", "dasp_ring_buffer", "hound"]
 capi = ["libc"]
