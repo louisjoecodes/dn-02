@@ -36,8 +36,12 @@
   "license": "BSD-3-Clause",
   "packageManager": "pnpm@10.8.0",
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.4",
+    "@testing-library/react": "^16.3.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
+    "@vitest/ui": "^3.2.4",
+    "jsdom": "^26.1.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
     "vitest": "^1.0.0",
