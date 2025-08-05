@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Denoise Test</title>
+</head>
+<body>
+    <h1>Direct Denoise Test</h1>
+    <p>Open the console to see the test results.</p>
+    
+    <script type="module">
+        console.log('Starting test...');
+        
+        try {
+            // Test 1: Can we import the module?
+            console.log('Test 1: Importing module...');
+            const module = await import('/dist/index.mjs');
+            console.log('Module imported successfully:', Object.keys(module));
+            
+            // Test 2: Can we access denoise?
+            console.log('\nTest 2: Checking denoise function...');
+            if (module.denoise) {
+                console.log('denoise function found!');
+                console.log('denoise properties:', Object.keys(module.denoise));
+                
+                // Test 3: Can we initialize?
+                console.log('\nTest 3: Initializing denoiser...');
+                try {
+                    await module.denoise.ready();
+                    console.log('Denoiser initialized successfully!');
+                } catch (err) {
+                    console.error('Failed to initialize:', err);
+                }
+            } else {
+                console.error('denoise function not found in module');
+            }
+            
+        } catch (err) {
+            console.error('Import failed:', err);
+            console.error('Error stack:', err.stack);
+        }
+    </script>
+</body>
+</html>

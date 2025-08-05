@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { useAudioDenoiser } from '../hooks/useAudioDenoiser';
+import React, { useState, useCallback, useRef } from "react";
+import { useAudioDenoiser } from "../hooks/useAudioDenoiser";
 
 export interface AudioDenoiserProps {
   onComplete: (audio: ArrayBuffer) => void;
@@ -19,8 +19,8 @@ export interface AudioDenoiserProps {
 export const AudioDenoiser: React.FC<AudioDenoiserProps> = ({
   onComplete,
   onError,
-  className = '',
-  accept = 'audio/*',
+  className = "",
+  accept = "audio/*",
   multiple = false,
   enableMicrophone = false,
   labels = {},
@@ -40,16 +40,16 @@ export const AudioDenoiser: React.FC<AudioDenoiserProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const defaultLabels = {
-    dropzone: labels.dropzone || 'Drop audio file here or click to select',
-    processing: labels.processing || 'Processing...',
-    microphone: labels.microphone || 'Start Microphone',
-    error: labels.error || 'Error: ',
+    dropzone: labels.dropzone || "Drop audio file here or click to select",
+    processing: labels.processing || "Processing...",
+    microphone: labels.microphone || "Start Microphone",
+    error: labels.error || "Error: ",
   };
 
   const handleFiles = useCallback(
     async (files: FileList) => {
       if (!files || files.length === 0) {
-        const err = new Error('No files selected');
+        const err = new Error("No files selected");
         onError?.(err);
         return;
       }
@@ -104,9 +104,9 @@ export const AudioDenoiser: React.FC<AudioDenoiserProps> = ({
       setIsMicrophoneActive(false);
     } else {
       try {
-        const stream = await startMicrophone();
+        await startMicrophone();
         setIsMicrophoneActive(true);
-        
+
         // Auto-stop after 30 seconds
         setTimeout(() => {
           stopMicrophone();
@@ -120,7 +120,10 @@ export const AudioDenoiser: React.FC<AudioDenoiserProps> = ({
 
   if (!isReady) {
     return (
-      <div className={`audio-denoiser ${className}`} data-testid="audio-denoiser">
+      <div
+        className={`audio-denoiser ${className}`}
+        data-testid="audio-denoiser"
+      >
         <div className="loading">Loading audio denoiser...</div>
       </div>
     );
@@ -128,7 +131,10 @@ export const AudioDenoiser: React.FC<AudioDenoiserProps> = ({
 
   if (error) {
     return (
-      <div className={`audio-denoiser ${className}`} data-testid="audio-denoiser">
+      <div
+        className={`audio-denoiser ${className}`}
+        data-testid="audio-denoiser"
+      >
         <div className="error">
           {defaultLabels.error} {error.message}
         </div>
@@ -139,8 +145,8 @@ export const AudioDenoiser: React.FC<AudioDenoiserProps> = ({
   return (
     <div className={`audio-denoiser ${className}`} data-testid="audio-denoiser">
       <div
-        className={`dropzone ${isDragging ? 'dragging' : ''} ${
-          isProcessing ? 'processing' : ''
+        className={`dropzone ${isDragging ? "dragging" : ""} ${
+          isProcessing ? "processing" : ""
         }`}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -150,7 +156,9 @@ export const AudioDenoiser: React.FC<AudioDenoiserProps> = ({
         {isProcessing ? (
           <div className="processing-message">
             {defaultLabels.processing}
-            {processingFile && <div className="file-name">{processingFile}</div>}
+            {processingFile && (
+              <div className="file-name">{processingFile}</div>
+            )}
           </div>
         ) : (
           <div className="drop-message">{defaultLabels.dropzone}</div>
@@ -163,19 +171,17 @@ export const AudioDenoiser: React.FC<AudioDenoiserProps> = ({
         accept={accept}
         multiple={multiple}
         onChange={handleFileInput}
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
         aria-label="Choose file"
       />
 
       {enableMicrophone && (
         <button
-          className={`microphone-button ${isMicrophoneActive ? 'active' : ''}`}
+          className={`microphone-button ${isMicrophoneActive ? "active" : ""}`}
           onClick={handleMicrophoneToggle}
           disabled={isProcessing}
         >
-          {isMicrophoneActive
-            ? 'Stop Microphone'
-            : defaultLabels.microphone}
+          {isMicrophoneActive ? "Stop Microphone" : defaultLabels.microphone}
         </button>
       )}
     </div>

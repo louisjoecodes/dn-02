@@ -13,7 +13,7 @@ default-run = "nnnoiseless"
 
 [features]
 default = ["bin", "dasp"]
-wasm = ["wasm-bindgen", "wee_alloc"]
+wasm = ["wasm-bindgen", "wee_alloc", "console_error_panic_hook"]
 
 bin = ["anyhow", "clap", "dasp_interpolate", "dasp_ring_buffer", "hound"]
 capi = ["libc"]
@@ -56,6 +56,7 @@ once_cell = "1.9.0"
 rand = { version = "0.8.5", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 wee_alloc = { version = "0.4", optional = true }
+console_error_panic_hook = { version = "0.1", optional = true }
 
 [dev-dependencies]
 assert_cmd = "2.0.4"

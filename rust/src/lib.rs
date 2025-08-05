@@ -10,6 +10,9 @@ use once_cell::sync::OnceCell;
 #[cfg(any(cargo_c, feature = "capi"))]
 mod capi;
 
+#[cfg(feature = "wasm")]
+mod wasm;
+
 #[cfg(feature = "train")]
 pub mod util;
 

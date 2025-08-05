@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Denoiser Demo</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #1a202c;
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .drop-zone {
+            border: 2px dashed #cbd5e0;
+            border-radius: 16px;
+            padding: 60px 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f7fafc;
+        }
+
+        .drop-zone:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .drop-zone.dragging {
+            border-color: #667eea;
+            background: #e6ebff;
+            transform: scale(0.98);
+        }
+
+        .drop-zone.processing {
+            cursor: default;
+            background: #f7fafc;
+            border-color: #cbd5e0;
+        }
+
+        .drop-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            opacity: 0.6;
+        }
+
+        .drop-text {
+            color: #4a5568;
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .drop-hint {
+            color: #a0aec0;
+            font-size: 14px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            display: inline-block;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .audio-container {
+            margin-top: 32px;
+            padding: 24px;
+            background: #f7fafc;
+            border-radius: 12px;
+        }
+
+        .audio-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #4a5568;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        audio {
+            width: 100%;
+            margin-bottom: 16px;
+        }
+
+        .processing-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-message {
+            color: #2d3748;
+            font-size: 16px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .error-message {
+            color: #e53e3e;
+            background: #fff5f5;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #718096;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useCallback, useEffect } = React;
+
+        function AudioDenoiserDemo() {
+            const [isLoading, setIsLoading] = useState(true);
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [isDragging, setIsDragging] = useState(false);
+            const [error, setError] = useState(null);
+            const [originalAudio, setOriginalAudio] = useState(null);
+            const [denoisedAudio, setDenoisedAudio] = useState(null);
+            const [stats, setStats] = useState(null);
+
+            useEffect(() => {
+                // Load the denoiser module
+                import('../dist/index.mjs').then(module => {
+                    module.denoise.ready().then(() => {
+                        setIsLoading(false);
+                    }).catch(err => {
+                        setError('Failed to load denoiser: ' + err.message);
+                        setIsLoading(false);
+                    });
+                }).catch(err => {
+                    setError('Failed to import module: ' + err.message);
+                    setIsLoading(false);
+                });
+            }, []);
+
+            const processAudio = useCallback(async (file) => {
+                setIsProcessing(true);
+                setError(null);
+                setStats(null);
+
+                try {
+                    const startTime = performance.now();
+                    
+                    // Create URLs for original audio
+                    const originalUrl = URL.createObjectURL(file);
+                    setOriginalAudio(originalUrl);
+
+                    // Import and use the denoise function
+                    const { denoise } = await import('../dist/index.mjs');
+                    
+                    // Process the audio
+                    const denoised = await denoise(file, {
+                        returnType: 'blob'
+                    });
+
+                    const endTime = performance.now();
+                    const processingTime = ((endTime - startTime) / 1000).toFixed(2);
+
+                    // Create URL for denoised audio
+                    const denoisedBlob = new Blob([denoised], { type: 'audio/wav' });
+                    const denoisedUrl = URL.createObjectURL(denoisedBlob);
+                    setDenoisedAudio(denoisedUrl);
+
+                    // Calculate stats
+                    setStats({
+                        originalSize: (file.size / 1024 / 1024).toFixed(2),
+                        denoisedSize: (denoisedBlob.size / 1024 / 1024).toFixed(2),
+                        processingTime
+                    });
+
+                } catch (err) {
+                    setError('Error processing audio: ' + err.message);
+                    console.error('Denoising error:', err);
+                } finally {
+                    setIsProcessing(false);
+                }
+            }, []);
+
+            const handleDrop = useCallback((e) => {
+                e.preventDefault();
+                setIsDragging(false);
+
+                const files = Array.from(e.dataTransfer.files);
+                const audioFile = files.find(f => f.type.startsWith('audio/'));
+
+                if (audioFile) {
+                    processAudio(audioFile);
+                } else {
+                    setError('Please drop an audio file');
+                }
+            }, [processAudio]);
+
+            const handleDragOver = useCallback((e) => {
+                e.preventDefault();
+                setIsDragging(true);
+            }, []);
+
+            const handleDragLeave = useCallback(() => {
+                setIsDragging(false);
+            }, []);
+
+            const handleFileSelect = useCallback((e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    processAudio(file);
+                }
+            }, [processAudio]);
+
+            if (isLoading) {
+                return (
+                    <div className="container">
+                        <div className="processing-indicator">
+                            <div className="spinner"></div>
+                            <span>Loading audio denoiser...</span>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="container">
+                    <h1>Audio Denoiser</h1>
+                    <p className="subtitle">Remove background noise from your audio files using AI</p>
+
+                    {!originalAudio && !isProcessing && (
+                        <div
+                            className={`drop-zone ${isDragging ? 'dragging' : ''}`}
+                            onDrop={handleDrop}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onClick={() => document.getElementById('fileInput').click()}
+                        >
+                            <svg className="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <div className="drop-text">Drop audio file here</div>
+                            <div className="drop-hint">or click to browse</div>
+                            <input
+                                id="fileInput"
+                                type="file"
+                                className="file-input"
+                                accept="audio/*"
+                                onChange={handleFileSelect}
+                            />
+                        </div>
+                    )}
+
+                    {isProcessing && (
+                        <div className="processing-indicator">
+                            <div className="spinner"></div>
+                            <span>Processing audio...</span>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="error-message">{error}</div>
+                    )}
+
+                    {originalAudio && !isProcessing && (
+                        <>
+                            <div className="audio-container">
+                                <label className="audio-label">Original Audio</label>
+                                <audio controls src={originalAudio} />
+                            </div>
+
+                            {denoisedAudio && (
+                                <>
+                                    <div className="audio-container">
+                                        <label className="audio-label">Denoised Audio</label>
+                                        <audio controls src={denoisedAudio} />
+                                    </div>
+
+                                    {stats && (
+                                        <div className="stats">
+                                            <div className="stat">
+                                                <div className="stat-value">{stats.originalSize} MB</div>
+                                                <div className="stat-label">Original Size</div>
+                                            </div>
+                                            <div className="stat">
+                                                <div className="stat-value">{stats.processingTime}s</div>
+                                                <div className="stat-label">Processing Time</div>
+                                            </div>
+                                            <div className="stat">
+                                                <div className="stat-value">{stats.denoisedSize} MB</div>
+                                                <div className="stat-label">Denoised Size</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            <button 
+                                className="button" 
+                                onClick={() => {
+                                    setOriginalAudio(null);
+                                    setDenoisedAudio(null);
+                                    setStats(null);
+                                    setError(null);
+                                }}
+                                style={{ marginTop: '24px', width: '100%' }}
+                            >
+                                Process Another File
+                            </button>
+                        </>
+                    )}
+                </div>
+            );
+        }
+
+        ReactDOM.render(<AudioDenoiserDemo />, document.getElementById('root'));
+    </script>
+</body>
+</html>

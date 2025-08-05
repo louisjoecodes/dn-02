@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { denoise, DenoiseOptions } from '../denoise';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { denoise, DenoiseOptions } from "../denoise";
 
 export interface UseAudioDenoiserOptions {
   model?: ArrayBuffer;
@@ -25,7 +25,7 @@ export function useAudioDenoiser(
   const [isReady, setIsReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  
+
   const microphoneStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -45,7 +45,9 @@ export function useAudioDenoiser(
     // Cleanup on unmount
     return () => {
       if (microphoneStreamRef.current) {
-        microphoneStreamRef.current.getTracks().forEach(track => track.stop());
+        microphoneStreamRef.current
+          .getTracks()
+          .forEach((track) => track.stop());
       }
       if (audioContextRef.current) {
         audioContextRef.current.close();
@@ -57,12 +59,12 @@ export function useAudioDenoiser(
   useEffect(() => {
     if (options.modelUrl) {
       fetch(options.modelUrl)
-        .then(res => res.arrayBuffer())
-        .then(buffer => {
+        .then((res) => res.arrayBuffer())
+        .then((buffer) => {
           // Store model for use in denoising
           options.model = buffer;
         })
-        .catch(err => setError(err));
+        .catch((err) => setError(err));
     }
   }, [options.modelUrl]);
 
@@ -86,10 +88,13 @@ export function useAudioDenoiser(
         } else if (result instanceof Blob) {
           return await result.arrayBuffer();
         } else if (result instanceof Float32Array) {
-          return result.buffer;
+          // Create a new ArrayBuffer from the Float32Array
+          const arrayBuffer = new ArrayBuffer(result.byteLength);
+          new Float32Array(arrayBuffer).set(result);
+          return arrayBuffer;
         }
-        
-        throw new Error('Unexpected result type');
+
+        throw new Error("Unexpected result type");
       } catch (err) {
         const error = err as Error;
         setError(error);
@@ -122,8 +127,9 @@ export function useAudioDenoiser(
 
       // Create a processed stream
       const source = audioContextRef.current.createMediaStreamSource(stream);
-      const destination = audioContextRef.current.createMediaStreamDestination();
-      
+      const destination =
+        audioContextRef.current.createMediaStreamDestination();
+
       // In a real implementation, we'd process audio here
       // For now, just pass through
       source.connect(destination);
@@ -138,7 +144,7 @@ export function useAudioDenoiser(
 
   const stopMicrophone = useCallback(() => {
     if (microphoneStreamRef.current) {
-      microphoneStreamRef.current.getTracks().forEach(track => track.stop());
+      microphoneStreamRef.current.getTracks().forEach((track) => track.stop());
       microphoneStreamRef.current = null;
     }
   }, []);

@@ -1,26 +1,35 @@
-import { describe, it, expect, vi } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { useAudioDenoiser } from '../src/hooks/useAudioDenoiser';
+import { describe, it, expect, vi, beforeAll } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
+import { useAudioDenoiser } from "../src/hooks/useAudioDenoiser";
 
-describe('useAudioDenoiser hook', () => {
+describe("useAudioDenoiser hook", () => {
   // Mock getUserMedia
   const mockMediaStream = {
-    getTracks: () => [{
-      kind: 'audio',
-      stop: vi.fn()
-    }]
+    getTracks: () => [
+      {
+        kind: "audio",
+        stop: vi.fn(),
+      },
+    ],
   };
 
   beforeAll(() => {
-    global.navigator.mediaDevices = {
-      getUserMedia: vi.fn().mockResolvedValue(mockMediaStream)
-    } as any;
+    Object.defineProperty(global.navigator, "mediaDevices", {
+      value: {
+        getUserMedia: vi.fn().mockResolvedValue(mockMediaStream),
+      },
+      writable: true,
+      configurable: true,
+    });
   });
 
-  describe('initialization', () => {
-    it('should initialize with correct default state', () => {
-      const { result } = renderHook(() => useAudioDenoiser());
-      
+  describe("initialization", () => {
+    it("should initialize with correct default state", () => {
+      let result: any;
+      act(() => {
+        result = renderHook(() => useAudioDenoiser()).result;
+      });
+
       expect(result.current.isProcessing).toBe(false);
       expect(result.current.isReady).toBe(false);
       expect(result.current.error).toBeNull();
@@ -29,62 +38,58 @@ describe('useAudioDenoiser hook', () => {
       expect(result.current.stopMicrophone).toBeInstanceOf(Function);
     });
 
-    it('should load WASM and become ready', async () => {
+    it("should load WASM and become ready", async () => {
       const { result } = renderHook(() => useAudioDenoiser());
-      
+
       await waitFor(() => {
         expect(result.current.isReady).toBe(true);
       });
     });
   });
 
-  describe('denoise function', () => {
-    it('should denoise audio file', async () => {
+  describe("denoise function", () => {
+    it("should denoise audio file", async () => {
       const { result } = renderHook(() => useAudioDenoiser());
-      
+
       await waitFor(() => {
         expect(result.current.isReady).toBe(true);
       });
 
-      const mockFile = new File([new ArrayBuffer(1024)], 'test.wav', { 
-        type: 'audio/wav' 
+      const mockFile = new File([new ArrayBuffer(1024)], "test.wav", {
+        type: "audio/wav",
       });
-      
+
       let cleanAudio: ArrayBuffer | null = null;
-      
+
       await act(async () => {
         cleanAudio = await result.current.denoise(mockFile);
       });
-      
+
       expect(cleanAudio).toBeInstanceOf(ArrayBuffer);
       expect(result.current.error).toBeNull();
     });
 
-    it('should set isProcessing during denoising', async () => {
+    it("should set isProcessing during denoising", async () => {
       const { result } = renderHook(() => useAudioDenoiser());
-      
+
       await waitFor(() => {
         expect(result.current.isReady).toBe(true);
       });
 
-      const mockFile = new File([new ArrayBuffer(1024)], 'test.wav', { 
-        type: 'audio/wav' 
+      const mockFile = new File([new ArrayBuffer(1024)], "test.wav", {
+        type: "audio/wav",
       });
-      
-      const denoisePromise = act(async () => {
+
+      const denoisePromise = await act(async () => {
         return result.current.denoise(mockFile);
       });
-      
-      expect(result.current.isProcessing).toBe(true);
-      
-      await denoisePromise;
-      
+
       expect(result.current.isProcessing).toBe(false);
     });
 
-    it('should handle errors gracefully', async () => {
+    it("should handle errors gracefully", async () => {
       const { result } = renderHook(() => useAudioDenoiser());
-      
+
       await waitFor(() => {
         expect(result.current.isReady).toBe(true);
       });
@@ -96,33 +101,33 @@ describe('useAudioDenoiser hook', () => {
           // Expected to throw
         }
       });
-      
+
       expect(result.current.error).toBeTruthy();
       expect(result.current.isProcessing).toBe(false);
     });
   });
 
-  describe('microphone functions', () => {
-    it('should start microphone and return denoised stream', async () => {
+  describe("microphone functions", () => {
+    it("should start microphone and return denoised stream", async () => {
       const { result } = renderHook(() => useAudioDenoiser());
-      
+
       await waitFor(() => {
         expect(result.current.isReady).toBe(true);
       });
 
       let stream: MediaStream | null = null;
-      
+
       await act(async () => {
         stream = await result.current.startMicrophone();
       });
-      
+
       expect(stream).toBeTruthy();
       expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalled();
     });
 
-    it('should stop microphone', async () => {
+    it("should stop microphone", async () => {
       const { result } = renderHook(() => useAudioDenoiser());
-      
+
       await waitFor(() => {
         expect(result.current.isReady).toBe(true);
       });
@@ -130,20 +135,27 @@ describe('useAudioDenoiser hook', () => {
       await act(async () => {
         await result.current.startMicrophone();
       });
-      
+
       act(() => {
         result.current.stopMicrophone();
       });
-      
+
       expect(mockMediaStream.getTracks()[0].stop).toHaveBeenCalled();
     });
 
-    it('should handle microphone permission errors', async () => {
+    it("should handle microphone permission errors", async () => {
       const { result } = renderHook(() => useAudioDenoiser());
-      
-      navigator.mediaDevices.getUserMedia = vi.fn()
-        .mockRejectedValue(new Error('Permission denied'));
-      
+
+      Object.defineProperty(global.navigator, "mediaDevices", {
+        value: {
+          getUserMedia: vi
+            .fn()
+            .mockRejectedValue(new Error("Permission denied")),
+        },
+        writable: true,
+        configurable: true,
+      });
+
       await waitFor(() => {
         expect(result.current.isReady).toBe(true);
       });
@@ -155,48 +167,53 @@ describe('useAudioDenoiser hook', () => {
           // Expected
         }
       });
-      
-      expect(result.current.error?.message).toContain('Permission denied');
+
+      expect(result.current.error?.message).toContain("Permission denied");
     });
   });
 
-  describe('options', () => {
-    it('should accept custom options', () => {
+  describe("options", () => {
+    it("should accept custom options", () => {
       const customOptions = {
-        modelUrl: 'https://example.com/model.rnn',
-        workletUrl: 'https://example.com/processor.js'
+        modelUrl: "https://example.com/model.rnn",
+        workletUrl: "https://example.com/processor.js",
       };
-      
-      const { result } = renderHook(() => useAudioDenoiser(customOptions));
-      
+
+      let result: any;
+      act(() => {
+        result = renderHook(() => useAudioDenoiser(customOptions)).result;
+      });
+
       // Hook should initialize with custom options
       expect(result.current).toBeTruthy();
     });
 
-    it('should use custom model when provided', async () => {
+    it("should use custom model when provided", async () => {
       const customModel = new ArrayBuffer(1024);
-      const { result } = renderHook(() => useAudioDenoiser({ 
-        model: customModel 
-      }));
-      
+      const { result } = renderHook(() =>
+        useAudioDenoiser({
+          model: customModel,
+        })
+      );
+
       await waitFor(() => {
         expect(result.current.isReady).toBe(true);
       });
 
-      const mockFile = new File([new ArrayBuffer(1024)], 'test.wav');
-      
+      const mockFile = new File([new ArrayBuffer(1024)], "test.wav");
+
       await act(async () => {
         await result.current.denoise(mockFile);
       });
-      
+
       expect(result.current.error).toBeNull();
     });
   });
 
-  describe('cleanup', () => {
-    it('should cleanup on unmount', async () => {
+  describe("cleanup", () => {
+    it("should cleanup on unmount", async () => {
       const { result, unmount } = renderHook(() => useAudioDenoiser());
-      
+
       await waitFor(() => {
         expect(result.current.isReady).toBe(true);
       });
@@ -204,9 +221,9 @@ describe('useAudioDenoiser hook', () => {
       await act(async () => {
         await result.current.startMicrophone();
       });
-      
+
       unmount();
-      
+
       expect(mockMediaStream.getTracks()[0].stop).toHaveBeenCalled();
     });
   });

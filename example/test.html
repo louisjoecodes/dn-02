@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Denoiser Test</title>
+</head>
+<body>
+    <h1>Audio Denoiser Test</h1>
+    <input type="file" id="audioFile" accept="audio/*">
+    <div id="status"></div>
+    <audio id="original" controls style="display:none"></audio>
+    <audio id="denoised" controls style="display:none"></audio>
+
+    <script type="module">
+        // First, let's properly set up the WASM path
+        window.__wasm_url = '/dist/core/nnnoiseless_bg.wasm';
+        
+        async function test() {
+            const status = document.getElementById('status');
+            
+            try {
+                // Import the core library (no React dependencies)
+                status.textContent = 'Loading library...';
+                const { denoise } = await import('/dist/core/core.mjs');
+                
+                // Initialize
+                status.textContent = 'Initializing denoiser...';
+                await denoise.ready();
+                status.textContent = 'Ready! Select an audio file.';
+                
+                // Handle file selection
+                document.getElementById('audioFile').addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    status.textContent = 'Processing...';
+                    
+                    try {
+                        // Show original
+                        const originalAudio = document.getElementById('original');
+                        originalAudio.src = URL.createObjectURL(file);
+                        originalAudio.style.display = 'block';
+                        
+                        // Process
+                        const result = await denoise(file, { returnType: 'blob' });
+                        
+                        // Show denoised
+                        const denoisedAudio = document.getElementById('denoised');
+                        denoisedAudio.src = URL.createObjectURL(result);
+                        denoisedAudio.style.display = 'block';
+                        
+                        status.textContent = 'Done! Original above, denoised below.';
+                    } catch (err) {
+                        status.textContent = 'Error: ' + err.message;
+                        console.error(err);
+                    }
+                });
+                
+            } catch (err) {
+                status.textContent = 'Failed to load: ' + err.message;
+                console.error(err);
+            }
+        }
+        
+        test();
+    </script>
+</body>
+</html>
